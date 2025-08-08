@@ -11,23 +11,40 @@ window.onload = () => {
   const descInput = document.getElementById('modal-desc-input')
   const stockInput = document.getElementById('modal-stock-input')
 
-  // 将图书渲染到管理列表的表格中。
+  let books = []
+
+  // 从后端加载图书
+  const loadBooks = async () => {
+    try {
+      const res = await fetch('http://127.0.0.1:5000/api/books')
+      const data = await res.json()
+      if (data.success) {
+        books = data.data
+        renderAdminBooks()
+      } else {
+        alert('Failed to load books.')
+      }
+    } catch (err) {
+      console.error('Error fetching books:', err)
+    }
+  }
+
+  // 渲染表格
   const renderAdminBooks = () => {
     if (!adminBookList) return
     adminBookList.innerHTML = books.map(book => `
-            <tr data-id="${book.id}">
-                <td class="px-6 py-4 whitespace-nowrap">${book.title}</td>
-                <td class="px-6 py-4 whitespace-nowrap">${book.author}</td>
-                <td class="px-6 py-4 whitespace-nowrap">${book.stock}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button class="text-indigo-600 hover:text-indigo-900 edit-btn">Edit</button>
-                    <button class="text-red-600 hover:text-red-900 ml-4 delete-btn">Delete</button>
-                </td>
-            </tr>
-        `).join('')
+      <tr data-id="${book.id}">
+        <td class="px-6 py-4 whitespace-nowrap">${book.title}</td>
+        <td class="px-6 py-4 whitespace-nowrap">${book.author}</td>
+        <td class="px-6 py-4 whitespace-nowrap">${book.stock}</td>
+        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+          <button class="text-indigo-600 hover:text-indigo-900 edit-btn">Edit</button>
+          <button class="text-red-600 hover:text-red-900 ml-4 delete-btn">Delete</button>
+        </td>
+      </tr>
+    `).join('')
   }
 
-  // 打开模态框。
   const openModal = (isEdit = false, book = null) => {
     bookForm.reset()
     if (isEdit && book) {
@@ -44,78 +61,83 @@ window.onload = () => {
     bookModal.classList.remove('hidden')
   }
 
-  // 关闭模态框。
   const closeModal = () => {
     bookModal.classList.add('hidden')
   }
 
-  // 处理表单提交（添加或编辑）。
-  const handleFormSubmit = (event) => {
+  const handleFormSubmit = async (event) => {
     event.preventDefault()
     const id = bookIdInput.value
-    const newBookData = {
+    const payload = {
       title: titleInput.value,
       author: authorInput.value,
       description: descInput.value,
       stock: parseInt(stockInput.value, 10),
-      cover: 'assets/images/cover-placeholder.jpg' // Placeholder
+      cover_image_url: 'assets/images/cover-placeholder.jpg'
     }
 
-    if (id) { // Edit existing book
-      const bookIndex = books.findIndex(b => b.id.toString() === id)
-      if (bookIndex !== -1) {
-        books[bookIndex] = { ...books[bookIndex], ...newBookData }
+    try {
+      let response
+      if (id) {
+        response = await fetch(`http://127.0.0.1:5000/api/books/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+      } else {
+        response = await fetch('http://127.0.0.1:5000/api/books', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
       }
-    } else { // Add new book
-      newBookData.id = Date.now() // Simple unique ID
-      books.push(newBookData)
-    }
 
-    renderAdminBooks()
-    closeModal()
+      const result = await response.json()
+      if (result.success) {
+        await loadBooks()
+        closeModal()
+      } else {
+        alert(result.message || 'Failed to save book')
+      }
+    } catch (err) {
+      console.error('Submit error:', err)
+      alert('Error saving book.')
+    }
   }
 
-  // 处理图书列表中的点击事件  编辑或删除
-  const handleBookListClick = (event) => {
+  const handleBookListClick = async (event) => {
     const target = event.target
     const row = target.closest('tr')
     if (!row) return
-
-    // 编辑图书
     const bookId = row.dataset.id
+
     if (target.classList.contains('edit-btn')) {
-      // 找到要编辑的图书
       const bookToEdit = books.find(b => b.id.toString() === bookId)
       openModal(true, bookToEdit)
     }
 
-    // 删除图书
     if (target.classList.contains('delete-btn')) {
       if (confirm('Are you sure you want to delete this book?')) {
-        // 找到要删除的图书
-        const bookIndex = books.findIndex(b => b.id.toString() === bookId)
-        if (bookIndex > -1) {
-          books.splice(bookIndex, 1)
-          renderAdminBooks()
+        try {
+          const response = await fetch(`http://127.0.0.1:5000/api/books/${bookId}`, { method: 'DELETE' })
+          const result = await response.json()
+          if (result.success) {
+            await loadBooks()
+          } else {
+            alert(result.message || 'Failed to delete')
+          }
+        } catch (err) {
+          console.error('Delete error:', err)
+          alert('Error deleting book.')
         }
       }
     }
   }
 
-  // 初始化渲染
-  renderAdminBooks()
-
-  // 事件监听
-  if (addBookBtn) {
-    addBookBtn.addEventListener('click', () => openModal())
-  }
-  if (cancelBtn) {
-    cancelBtn.addEventListener('click', closeModal)
-  }
-  if (bookForm) {
-    bookForm.addEventListener('submit', handleFormSubmit)
-  }
-  if (adminBookList) {
-    adminBookList.addEventListener('click', handleBookListClick)
-  }
-} 
+  // 初始化
+  loadBooks()
+  if (addBookBtn) addBookBtn.addEventListener('click', () => openModal())
+  if (cancelBtn) cancelBtn.addEventListener('click', closeModal)
+  if (bookForm) bookForm.addEventListener('submit', handleFormSubmit)
+  if (adminBookList) adminBookList.addEventListener('click', handleBookListClick)
+}
