@@ -1,53 +1,33 @@
-window.onload = () => {
-  const bookDetailContent = document.getElementById('book-detail-content')
+document.addEventListener('DOMContentLoaded', async () => {
+  const container = document.getElementById('book-detail-content');
+  const params = new URLSearchParams(window.location.search);
+  const bookId = params.get('id');
 
-  // 从URL的查询字符串中获取参数值。
-  const getQueryParam = (param) => {
-    const urlParams = new URLSearchParams(window.location.search)
-    return urlParams.get(param)
+  if (!bookId) {
+    container.innerHTML = '<p class="text-red-500">No book ID provided.</p>';
+    return;
   }
 
-  // 根据ID查找图书。
-  const findBookById = (id) => {
-    return books.find(book => book.id.toString() === id)
-  }
+  try {
+    const response = await fetch(`http://localhost:5000/api/books/${bookId}`);
+    const data = await response.json();
 
-  // 将图书的详细信息渲染到页面上。
-  const renderBookDetails = (book) => {
-    if (!book) {
-      bookDetailContent.innerHTML = '<p class="text-red-500">Book not found.</p>'
-      return
+    if (!data.success) {
+      throw new Error(data.message || 'Failed to load book details.');
     }
 
-    bookDetailContent.innerHTML = `
-            <div class="grid md:grid-cols-3 gap-8">
-                <div class="md:col-span-1">
-                    <img src="${book.cover}" alt="Cover of ${book.title}" class="w-full h-auto rounded-lg shadow-md">
-                </div>
-                <div class="md:col-span-2">
-                    <h1 class="text-4xl font-bold text-gray-800">${book.title}</h1>
-                    <p class="text-xl text-gray-600 mt-2">by ${book.author}</p>
-                    <p class="mt-4 text-gray-700">${book.description}</p>
-                    <div class="mt-6">
-                        <span class="text-lg font-semibold ${book.stock > 0 ? 'text-green-600' : 'text-red-600'}">
-                            ${book.stock > 0 ? `${book.stock} copies available` : 'Currently out of stock'}
-                        </span>
-                    </div>
-                    <div class="mt-6">
-                        <a href="borrow.html?id=${book.id}" class="w-full text-center bg-primary text-white py-3 px-6 rounded-md hover:bg-purple-700 ${book.stock === 0 ? 'opacity-50 cursor-not-allowed' : ''}">
-                            ${book.stock > 0 ? 'Apply to Borrow' : 'Unavailable'}
-                        </a>
-                    </div>
-                </div>
-            </div>
-        `
-  }
+    const book = data.data;
 
-  const bookId = getQueryParam('id')
-  if (bookId) {
-    const book = findBookById(bookId)
-    renderBookDetails(book)
-  } else {
-    bookDetailContent.innerHTML = '<p class="text-red-500">No book ID provided.</p>'
+    container.innerHTML = `
+      <img src="${book.cover_image_url || 'assets/images/default-cover.jpg'}" alt="${book.title}" class="w-64 h-96 object-cover float-left mr-8 rounded-md shadow-md" />
+      <h1 class="text-3xl font-bold mb-4">${book.title}</h1>
+      <h2 class="text-xl text-gray-700 mb-4">by ${book.author}</h2>
+      <p class="mb-4">${book.description || 'No description available.'}</p>
+      <p class="mb-2">Stock: <strong>${book.stock}</strong></p>
+      <a href="borrow.html?id=${book.id}" class="inline-block mt-4 px-6 py-2 bg-primary text-white rounded hover:bg-purple-700">Borrow this book</a>
+    `;
+  } catch (error) {
+    container.innerHTML = `<p class="text-red-500">Error loading book: ${error.message}</p>`;
+    console.error(error);
   }
-} 
+});

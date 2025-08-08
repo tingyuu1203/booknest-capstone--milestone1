@@ -35,10 +35,22 @@
         BookNest
       </a>
       <div class="flex items-center space-x-4">
-        <a href="index.html" class="hover:text-gray-300">Browse</a>
-        <a href="my-history.html" class="hover:text-gray-300">My History</a>
-        <a href="account.html" class="bg-white text-primary px-4 py-2 rounded-md hover:bg-gray-200">Login / Register</a>
-        <!-- Admin link will be shown conditionally -->
+        <!-- 游客状态 -->
+        <div id="guest-links" class="flex space-x-4">
+          <a href="index.html" class="hover:text-gray-300">Browse</a>
+          <a href="my-history.html" class="hover:text-gray-300">My History</a>
+          <a href="account.html" class="bg-white text-primary px-4 py-2 rounded-md hover:bg-gray-200">Login / Register</a>
+        </div>
+
+        <!-- 登录状态 -->
+        <div id="user-links" class="hidden flex space-x-4 items-center">
+          <a href="index.html" class="hover:text-gray-300">Browse</a>
+          <a href="my-history.html" class="hover:text-gray-300">My History</a>
+          <span id="welcome-user" class="text-sm"></span>
+          <a href="#" id="logout-btn" class="bg-white text-primary px-4 py-2 rounded-md hover:bg-gray-200 cursor-pointer">Logout</a>
+        </div>
+
+        <!-- 管理员链接 -->
         <a href="admin/manage-books.html" id="admin-link" class="hover:text-gray-300 hidden">Admin</a>
       </div>
     </nav>
@@ -78,8 +90,9 @@
     </div>
   </footer>
 
-  <script src="assets/js/data.js"></script>
+  <script src="assets/js/books.js"></script>
   <script src="assets/js/app.js"></script>
+  <script src="assets/js/common.js"></script>
 </body>
 
 </html>

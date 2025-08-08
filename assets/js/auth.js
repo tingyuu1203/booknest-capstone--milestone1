@@ -1,61 +1,100 @@
-// Lab 2: This script handles login/logout functionality
-// Lab 2: Demonstrates DOM manipulation and event handling for user auth
-
 window.onload = () => {
-  const showLoginBtn = document.getElementById('show-login-btn')
-  const showRegisterBtn = document.getElementById('show-register-btn')
-  const loginForm = document.getElementById('login-form')
-  const registerForm = document.getElementById('register-form')
+  const showLoginBtn = document.getElementById('show-login-btn');
+  const showRegisterBtn = document.getElementById('show-register-btn');
+  const loginForm = document.getElementById('login-form');
+  const registerForm = document.getElementById('register-form');
 
-  // Lab 2: Toggle between Login and Register views
+  // 切换到登录视图
   const showLogin = () => {
-    registerForm.classList.add('hidden')
-    showLoginBtn.classList.add('text-primary', 'border-b-2', 'border-primary')
-    showRegisterBtn.classList.remove('text-primary', 'border-b-2', 'border-primary')
-    loginForm.classList.remove('hidden')
-  }
+    registerForm.classList.add('hidden');
+    showLoginBtn.classList.add('text-primary', 'border-b-2', 'border-primary');
+    showRegisterBtn.classList.remove('text-primary', 'border-b-2', 'border-primary');
+    loginForm.classList.remove('hidden');
+  };
 
+  // 切换到注册视图
   const showRegister = () => {
-    loginForm.classList.add('hidden')
-    showRegisterBtn.classList.add('text-primary', 'border-b-2', 'border-primary')
-    showLoginBtn.classList.remove('text-primary', 'border-b-2', 'border-primary')
-    registerForm.classList.remove('hidden')
-  }
+    loginForm.classList.add('hidden');
+    showRegisterBtn.classList.add('text-primary', 'border-b-2', 'border-primary');
+    showLoginBtn.classList.remove('text-primary', 'border-b-2', 'border-primary');
+    registerForm.classList.remove('hidden');
+  };
 
-  // Lab 2: Simulate login behavior based on user type
-  const handleLogin = (event) => {
-    event.preventDefault()
-    const username = document.getElementById('login-email').value
-    const password = document.getElementById('login-password').value
+  // 登录处理
+  const handleLogin = async (event) => {
+    event.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
 
-    if (username === 'admin@qq.com' && password === 'admin') {
-      // Simulated admin login
-      window.location.href = 'admin/manage-books.html'
-    } else {
-      // Simulated normal user login
-      window.location.href = 'index.html'
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        alert('Login successful!');
+
+        // 存储登录用户信息和token
+        localStorage.setItem('user', JSON.stringify(data.data));
+        localStorage.setItem('token', data.access_token);  // 关键：存token
+
+        // 根据角色跳转
+        if (data.data.role === 'admin') {
+          window.location.href = 'admin/manage-books.html';
+        } else {
+          window.location.href = 'index.html';
+        }
+      } else {
+        alert('Login failed: ' + (data.message || 'Unknown error'));
+      }
+    } catch (error) {
+      alert('Login error: ' + error.message);
     }
-  }
+  };
 
-  // Lab 2 (preparation for Lab 3): Simulate registration logic
-  const handleRegister = (event) => {
-    event.preventDefault()
-    const username = document.getElementById('register-username').value
-    const email = document.getElementById('register-email').value
-    const password = document.getElementById('register-password').value
+  // 注册处理
+  const handleRegister = async (event) => {
+    event.preventDefault();
+    const username = document.getElementById('register-username').value;
+    const email = document.getElementById('register-email').value;
+    const password = document.getElementById('register-password').value;
 
-    // Simulate user registration (no database yet)
-    alert("Registration successful! Please log in.")
-    showLogin() // Switch back to login form
-  }
+    try {
+      const response = await fetch('http://127.0.0.1:5000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password }),
+      });
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        alert('Registration successful! Please log in.');
+        showLogin(); // 切回登录表单
+      } else {
+        alert('Registration failed: ' + (data.message || 'Unknown error'));
+      }
+    } catch (error) {
+      alert('Registration error: ' + error.message);
+    }
+  };
 
   if (showLoginBtn && showRegisterBtn) {
-    showLoginBtn.addEventListener('click', showLogin)
-    showRegisterBtn.addEventListener('click', showRegister)
+    showLoginBtn.addEventListener('click', showLogin);
+    showRegisterBtn.addEventListener('click', showRegister);
   }
 
   if (loginForm && registerForm) {
-    loginForm.addEventListener('submit', handleLogin)
-    registerForm.addEventListener('submit', handleRegister)
+    loginForm.addEventListener('submit', handleLogin);
+    registerForm.addEventListener('submit', handleRegister);
   }
-}
+
+  // 登出函数，清除token和用户信息
+  window.logout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');   // 关键：清除token
+    window.location.href = 'index.html'; // 或登录页
+  };
+};
